@@ -2,13 +2,7 @@ library(shiny)
 library(shinydashboard)
 library(DT)
 library(tidyverse)
-
-## Kobo API
 library(robotoolbox)
-token <- kobo_token(username = "dan_mungai", password = "Syzygious@1", 
-                    url = "https://kf.kobotoolbox.org/")
-
-kobo_setup(url = "https://kf.kobotoolbox.org/", token = token)
 
 
 # Define UI for application that draws a histogram
@@ -18,12 +12,17 @@ ui <- dashboardPage(
     dashboardBody(box(dataTableOutput("DataSets"), width = 10),
                   box(selectInput("dataset", "Datasets", 
                                   choices = c("Visitors","Fingerlings", "Revenue", "Food_Fish",
-                                              "Orders","Official_Coms")), width = 2)
+                                              "Orders","Official_Coms", "Tilapia_Pairing")),
+                      width = 2)
     )
 )
 
 
 server <- function(input, output) {
+    token <- kobo_token(username = "dan_mungai", password = "Syzygious@1", 
+                        url = "https://kf.kobotoolbox.org/")
+    
+    kobo_setup(url = "https://kf.kobotoolbox.org/", token = token)
     data <- kobo_asset_list()$uid[1] |> kobo_asset() |> kobo_data()
     Dataset <- reactive({
         switch(input$dataset,
@@ -43,7 +42,10 @@ server <- function(input, output) {
                    select(Order_Date:Order_Delivery_Date),
                
                Official_Coms = data |> filter(Section == "Official_Calls_and_Emails") |> 
-                   select(Call_Date:Agreed_Delivery_Date)
+                   select(Call_Date:Agreed_Delivery_Date),
+               
+               Tilapia_Pairing = data |> filter(Section == "Pond_Pairing") |> 
+                   select(Pairing_Date:Stocking_Pairing_Ratio)
         )
     })
     
