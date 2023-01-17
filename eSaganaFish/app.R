@@ -13,7 +13,7 @@ kobo_setup(url = "https://kf.kobotoolbox.org/", token = token)
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
-    dashboardHeader(title = 'NATD&ITC'),
+    dashboardHeader(title = 'Sagana Fisheries'),
     dashboardSidebar(),
     dashboardBody(box(dataTableOutput("DataSets"), width = 10),
                   box(selectInput("dataset", "Datasets", 
