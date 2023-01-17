@@ -37,7 +37,7 @@ server <- function(input, output) {
                    select(Harvest_Date:Total_Weight_Harvested),
                
                Visitors = data |> filter(Section == "Visitors") |> 
-                   select(Date_of_Visit:Visitor_Time_Out),
+                   select(Date_of_Visit:Visit_Purpose),
                
                Orders = data |> filter(Section == "Pre-Orders") |> 
                    select(Order_Date:Order_Delivery_Date),
