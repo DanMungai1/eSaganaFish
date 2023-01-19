@@ -4,10 +4,10 @@ username:
 account: qnko5e-danmungai
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 8055420
-bundleId: 6743801
+appId: 8071925
+bundleId: 6750994
 url: https://qnko5e-danmungai.shinyapps.io/eSaganaFish/
-when: 1673973214.71105
-lastSyncTime: 1673973214.71107
+when: 1674124269.62642
+lastSyncTime: 1674124269.62643
 asMultiple: FALSE
 asStatic: FALSE

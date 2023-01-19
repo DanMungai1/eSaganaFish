@@ -3,13 +3,15 @@ library(shinydashboard)
 library(DT)
 library(tidyverse)
 library(robotoolbox)
+library(gitlabr)
 
+options("repos")
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
     dashboardHeader(title = 'Sagana Fisheries'),
     dashboardSidebar(),
-    dashboardBody(box(dataTableOutput("DataSets"), width = 10),
+    dashboardBody(box(DTOutput("DataSets"), width = 10),
                   box(selectInput("dataset", "Datasets", 
                                   choices = c("Visitors","Fingerlings", "Revenue", "Food_Fish",
                                               "Orders","Official_Coms", "Tilapia_Pairing")),
@@ -19,10 +21,8 @@ ui <- dashboardPage(
 
 
 server <- function(input, output) {
-    token <- kobo_token(username = "dan_mungai", password = "Syzygious@1", 
-                        url = "https://kf.kobotoolbox.org/")
-    
-    kobo_setup(url = "https://kf.kobotoolbox.org/", token = token)
+    kobo_setup(url = "https://kf.kobotoolbox.org/", 
+               token = "17d3d9e1633c38dde15ca96cf043b59a14d36bcf")
     data <- kobo_asset_list()$uid[1] |> kobo_asset() |> kobo_data()
     Dataset <- reactive({
         switch(input$dataset,
@@ -49,9 +49,11 @@ server <- function(input, output) {
         )
     })
     
-    output$DataSets <- renderDataTable({Dataset()})
+    output$DataSets <- renderDT({Dataset()})
     
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
