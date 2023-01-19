@@ -5,9 +5,9 @@ account: nadtsagana
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8055392
-bundleId: 6751030
+bundleId: 6751142
 url: https://nadtsagana.shinyapps.io/eSaganaFish/
-when: 1674125259.09589
-lastSyncTime: 1674125259.0959
+when: 1674127799.59854
+lastSyncTime: 1674127799.59855
 asMultiple: FALSE
 asStatic: FALSE

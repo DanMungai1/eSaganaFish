@@ -25,7 +25,8 @@ server <- function(input, output) {
     Dataset <- reactive({
         switch(input$dataset,
                Fingerlings = data |> filter(Section == "Fingerlings_Sales") |> 
-                   select(Fingerling_Sale_Date:Fingerlings_Total_Revenue),
+                   select(Fingerling_Sale_Date, Farmer_Name, Farmer_Contact,
+                          Farmer_County,Fingerlings_Sold, Numbers_Sold),
                
                Revenue = data |> filter(Section == "General_Sales") |> 
                    select(Sales_Date:Receipt_number),
