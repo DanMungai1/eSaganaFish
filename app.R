@@ -5,8 +5,6 @@ library(tidyverse)
 library(robotoolbox)
 library(gitlabr)
 
-options("repos")
-
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
     dashboardHeader(title = 'Sagana Fisheries'),
