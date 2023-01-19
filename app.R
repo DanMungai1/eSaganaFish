@@ -3,17 +3,41 @@ library(shinydashboard)
 library(DT)
 library(tidyverse)
 library(robotoolbox)
-library(gitlabr)
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
     dashboardHeader(title = 'Sagana Fisheries'),
-    dashboardSidebar(),
-    dashboardBody(box(DTOutput("DataSets"), width = 10),
-                  box(selectInput("dataset", "Datasets", 
-                                  choices = c("Visitors","Fingerlings", "Revenue", "Food_Fish",
-                                              "Orders","Official_Coms", "Tilapia_Pairing")),
-                      width = 2)
+    dashboardSidebar(
+        sidebarMenu(
+        # Setting id makes input$tabs give the tabName of currently-selected tab
+        id = "tabs",
+        menuItem("Datasets", tabName = "datasets", icon = icon("dashboard")),
+        menuItem("visitors", icon = icon("calendar"), tabName = "Visitors",
+                 badgeColor = "green"),
+        menuItem("Fingerlings Data", tabName = "fingerlings", icon = icon("file")),
+        menuItem("Revenue Collection", tabName = "sales", icon = icon("dollar")),
+        menuItem("Food Fish", tabName = "foodfish", icon = icon("fish")))),
+    
+    dashboardBody(
+        tabItems(
+            tabItem("datasets",
+                    box(DTOutput("DataSets"), width = 10),
+                    box(selectInput("dataset", "Datasets", 
+                                    choices = c("Visitors","Fingerlings", "Revenue", "Food_Fish",
+                                                "Orders","Official_Coms", "Tilapia_Pairing")),
+                        width = 2)),
+            tabItem("Visitors",
+                    "Widgets tab content"
+            ),
+            tabItem("fingerlings",
+                    "Sub-item 1 tab content"
+            ),
+            tabItem("sales",
+                    "Sub-item 2 tab content"
+            ),
+            tabItem("foodfish",
+                    "Sub-item 2 tab content"
+        ))
     )
 )
 
