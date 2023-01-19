@@ -27,16 +27,27 @@ ui <- dashboardPage(
                                                 "Orders","Official_Coms", "Tilapia_Pairing")),
                         width = 2)),
             tabItem("Visitors",
-                    "Widgets tab content"
+                    fluidPage(
+                        fluidRow(
+                            column(width = 12,
+                                   box(plotOutput("visits"), width = 12))
+                        )
+                    )
             ),
             tabItem("fingerlings",
-                    "Sub-item 1 tab content"
+                    fluidPage(
+                        fluidRow()
+                    )
             ),
             tabItem("sales",
-                    "Sub-item 2 tab content"
+                    fluidPage(
+                        fluidRow()
+                    )
             ),
             tabItem("foodfish",
-                    "Sub-item 2 tab content"
+                    fluidPage(
+                        fluidRow()
+                    )
         ))
     )
 )
@@ -73,6 +84,12 @@ server <- function(input, output) {
     })
     
     output$DataSets <- renderDT({Dataset()})
+    output$visits <- renderPlot({
+        data |> filter(Section == "Visitors") |> 
+            select(Date_of_Visit:Visit_Purpose) |> 
+            count(Date_of_Visit) |> 
+            ggplot(aes(Date_of_Visit, n)) + geom_col()
+    })
     
 }
 

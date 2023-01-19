@@ -1,13 +1,13 @@
 name: eSaganaFish
-title:
+title: eSaganaFish
 username:
 account: nadtsagana
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8055392
-bundleId: 6751256
+bundleId: 6752402
 url: https://nadtsagana.shinyapps.io/eSaganaFish/
-when: 1674131400.36455
-lastSyncTime: 1674131400.36457
+when: 1674153156.56286
+lastSyncTime: 1674153156.56287
 asMultiple: FALSE
 asStatic: FALSE
