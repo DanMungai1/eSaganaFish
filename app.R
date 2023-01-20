@@ -3,6 +3,7 @@ library(shinydashboard)
 library(DT)
 library(tidyverse)
 library(robotoolbox)
+library(ggchicklet)
 
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
@@ -31,17 +32,27 @@ ui <- dashboardPage(
                         fluidRow(
                             column(width = 12,
                                    box(plotOutput("visits"), width = 12))
+                        ),
+                        fluidRow(
+                            column(width = 12,
+                                   box(plotOutput("counties"), width = 12))
                         )
                     )
             ),
             tabItem("fingerlings",
                     fluidPage(
-                        fluidRow()
+                        fluidRow(
+                            column(width = 12,
+                                   box(plotOutput("fingers"), width = 12))
+                        )
                     )
             ),
             tabItem("sales",
                     fluidPage(
-                        fluidRow()
+                        fluidRow(
+                            column(width = 12,
+                                   box(plotOutput("revenue"), width = 12))
+                        )
                     )
             ),
             tabItem("foodfish",
@@ -87,8 +98,39 @@ server <- function(input, output) {
     output$visits <- renderPlot({
         data |> filter(Section == "Visitors") |> 
             select(Date_of_Visit:Visit_Purpose) |> 
-            count(Date_of_Visit) |> 
-            ggplot(aes(Date_of_Visit, n)) + geom_col()
+            count(Date_of_Visit, name = "Visitors") |> 
+            ggplot(aes(Date_of_Visit, Visitors)) + geom_chicklet()
+            
+    })
+    output$counties <- renderPlot({
+        data |> filter(Section == "Visitors") |> 
+            select(Date_of_Visit:Visit_Purpose) |> 
+            count(Date_of_Visit, Visitor_s_County,name = "Visitors") |> 
+            ggplot(aes(Date_of_Visit, Visitors, fill = Visitor_s_County)) + 
+            geom_chicklet() +
+            theme(legend.position = c(0.9, 0.7))
+    })
+    output$fingers <- renderPlot({
+        data |> filter(Section == "Fingerlings_Sales") |> 
+        select(Fingerling_Sale_Date, Farmer_Name, Farmer_Contact,
+               Farmer_County,Fingerlings_Sold, Numbers_Sold) |> 
+        group_by(Fingerling_Sale_Date, Fingerlings_Sold) |> 
+        summarise(Numbers_Sold = sum(Numbers_Sold), .groups = "drop") |> 
+        ggplot(aes(Fingerling_Sale_Date, Numbers_Sold, fill = Fingerlings_Sold)) +
+        geom_chicklet() +
+        theme(legend.position = c(0.8, 0.7)) +
+        labs(x = "Date of Sale", y = "Fingerlings Sold")
+            
+    })
+    output$revenue <- renderPlot({
+        data |> filter(Section == "General_Sales") |> 
+            select(Sales_Date:Receipt_number) |> 
+            group_by(Sales_Date, Product_Sold) |> 
+            summarise(sales_Total_Revenue = sum(Sales_Total_Revenue), .groups = "drop") |> 
+            ggplot(aes(Sales_Date, sales_Total_Revenue, fill = Product_Sold)) +
+            geom_chicklet() +
+            theme(legend.position = c(0.8,0.7)) +
+            labs(x = "Date of Sale", y = "Revenue Generated", fill = "Product Sold")
     })
     
 }
