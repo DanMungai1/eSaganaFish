@@ -57,7 +57,10 @@ ui <- dashboardPage(
             ),
             tabItem("foodfish",
                     fluidPage(
-                        fluidRow()
+                        fluidRow(
+                            column(width = 12,
+                                   box(plotOutput("food"), width = 12))
+                        )
                     )
         ))
     )
@@ -131,6 +134,16 @@ server <- function(input, output) {
             geom_chicklet() +
             theme(legend.position = c(0.8,0.7)) +
             labs(x = "Date of Sale", y = "Revenue Generated", fill = "Product Sold")
+    })
+    output$food <- renderPlot({
+        data |> filter(Section == "Food_Fish_Harvest") |> 
+            select(Harvest_Date:Total_Weight_Harvested) |> 
+            group_by(Harvest_Date,Species_Harvested) |> 
+            summarise(Harvested_Weight = sum(Total_Weight_Harvested), .groups = "drop") |> 
+            ggplot(aes(Harvest_Date, Harvested_Weight, fill = Species_Harvested)) +
+            geom_chicklet() +
+            theme(legend.position = c(0.5, 0.8)) +
+            labs(x = "Harvest Date", y = "Harvested Weight")
     })
     
 }
