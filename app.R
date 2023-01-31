@@ -4,7 +4,14 @@ library(DT)
 library(tidyverse)
 library(robotoolbox)
 library(ggchicklet)
+library(gt)
+library(lubridate)
+library(showtext)
+library(writexl)
 
+font_add_google(family = "Noto serif", name = "Noto Serif")
+showtext_auto()
+showtext_opts(dpi = 130)
 # Define UI for application that draws a histogram
 ui <- dashboardPage(
     dashboardHeader(title = 'Sagana Fisheries'),
@@ -26,16 +33,17 @@ ui <- dashboardPage(
                     box(selectInput("dataset", "Datasets", 
                                     choices = c("Visitors","Fingerlings", "Revenue", "Food_Fish",
                                                 "Orders","Official_Coms", "Tilapia_Pairing")),
-                        width = 2)),
+                        width = 2),
+                    box(downloadButton("download", "Download.xlsx"), width = 4)),
             tabItem("Visitors",
                     fluidPage(
                         fluidRow(
                             column(width = 12,
-                                   box(plotOutput("visits"), width = 12))
+                                   box(plotOutput("counties"), width = 12))
                         ),
                         fluidRow(
                             column(width = 12,
-                                   box(plotOutput("counties"), width = 12))
+                                   box(tableOutput("Visits")))
                         )
                     )
             ),
@@ -43,7 +51,12 @@ ui <- dashboardPage(
                     fluidPage(
                         fluidRow(
                             column(width = 12,
-                                   box(plotOutput("fingers"), width = 12))
+                                   box(plotOutput("fingers"), width = 12))),
+                        fluidRow(
+                            column(width = 6,
+                                   box(tableOutput("weekly"), width = 12)),
+                            column(width = 6,
+                                   box(tableOutput("monthly"), width = 12))
                         )
                     )
             ),
@@ -52,6 +65,12 @@ ui <- dashboardPage(
                         fluidRow(
                             column(width = 12,
                                    box(plotOutput("revenue"), width = 12))
+                        ),
+                        fluidRow(
+                            column(width = 6,
+                                   box(tableOutput("weeklysales"), width = 12)),
+                            column(width = 6,
+                                   box(tableOutput("monthlysales"), width = 12))
                         )
                     )
             ),
@@ -60,6 +79,10 @@ ui <- dashboardPage(
                         fluidRow(
                             column(width = 12,
                                    box(plotOutput("food"), width = 12))
+                        ),
+                        fluidRow(
+                            column(width = 12,
+                                   box(tableOutput("WeeklyFoodFish"), width = 12))
                         )
                     )
         ))
@@ -97,21 +120,23 @@ server <- function(input, output) {
         )
     })
     
+    output$download <- downloadHandler(
+        filename = function() {
+            paste0(input$dataset, ".xlsx")
+        },
+        content = function(file) {
+            write_xlsx(Dataset(), file)
+        }
+    )
     output$DataSets <- renderDT({Dataset()})
-    output$visits <- renderPlot({
-        data |> filter(Section == "Visitors") |> 
-            select(Date_of_Visit:Visit_Purpose) |> 
-            count(Date_of_Visit, name = "Visitors") |> 
-            ggplot(aes(Date_of_Visit, Visitors)) + geom_chicklet()
-            
-    })
     output$counties <- renderPlot({
         data |> filter(Section == "Visitors") |> 
             select(Date_of_Visit:Visit_Purpose) |> 
             count(Date_of_Visit, Visitor_s_County,name = "Visitors") |> 
             ggplot(aes(Date_of_Visit, Visitors, fill = Visitor_s_County)) + 
             geom_chicklet() +
-            theme(legend.position = c(0.9, 0.7))
+            theme(legend.position = c(0.9, 0.7), text = element_text(family = "Noto serif")) +
+            labs(x = "Date of Visit", fill = "County of Visitor")
     })
     output$fingers <- renderPlot({
         data |> filter(Section == "Fingerlings_Sales") |> 
@@ -121,7 +146,8 @@ server <- function(input, output) {
         summarise(Numbers_Sold = sum(Numbers_Sold), .groups = "drop") |> 
         ggplot(aes(Fingerling_Sale_Date, Numbers_Sold, fill = Fingerlings_Sold)) +
         geom_chicklet() +
-        theme(legend.position = c(0.8, 0.7)) +
+        theme(legend.position = c(0.8, 0.7),
+              text = element_text(family = "Noto serif")) +
         labs(x = "Date of Sale", y = "Fingerlings Sold")
             
     })
@@ -132,7 +158,8 @@ server <- function(input, output) {
             summarise(sales_Total_Revenue = sum(Sales_Total_Revenue), .groups = "drop") |> 
             ggplot(aes(Sales_Date, sales_Total_Revenue, fill = Product_Sold)) +
             geom_chicklet() +
-            theme(legend.position = c(0.8,0.7)) +
+            theme(legend.position = c(0.8,0.7),
+                  text = element_text(family = "Noto serif")) +
             labs(x = "Date of Sale", y = "Revenue Generated", fill = "Product Sold")
     })
     output$food <- renderPlot({
@@ -142,11 +169,119 @@ server <- function(input, output) {
             summarise(Harvested_Weight = sum(Total_Weight_Harvested), .groups = "drop") |> 
             ggplot(aes(Harvest_Date, Harvested_Weight, fill = Species_Harvested)) +
             geom_chicklet() +
-            theme(legend.position = c(0.5, 0.8)) +
+            theme(legend.position = c(0.5, 0.8),
+                  text = element_text(family = "Noto serif")) +
             labs(x = "Harvest Date", y = "Harvested Weight")
     })
-    
+    output$weekly <- renderTable({
+        data |> filter(Section == "Fingerlings_Sales") |> 
+            select(Fingerling_Sale_Date, Farmer_Name, Farmer_Contact,
+                   Farmer_County,Fingerlings_Sold, Numbers_Sold) |> 
+            mutate(Month = month(Fingerling_Sale_Date, label = T),
+                   Week = week(Fingerling_Sale_Date),
+                   Day = wday(Fingerling_Sale_Date, label = T),
+                   Week = as.factor(Week)) |> 
+            select(Fingerlings_Sold, Numbers_Sold, Week) |> 
+            group_by(Fingerlings_Sold, Week) |> 
+            summarise(Numbers_Sold = sum(Numbers_Sold), .groups = "drop") |> 
+            pivot_wider(names_from = Week, values_from = Numbers_Sold, values_fill = 0) |> 
+            rename(`Week 1` = `1`,
+                   `Week 2` = `2`,
+                   `Week 3` = `3`,
+                   `Week 4` = `4`,
+                   `Week 5` = `5`,
+                   `Species Sold`=Fingerlings_Sold) |> 
+            rowwise(`Species Sold`) |> 
+            mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+            arrange(desc(Total)) |> ungroup() |> 
+            gt()
+    })
+   output$monthly <- renderTable({
+       data |> filter(Section == "Fingerlings_Sales") |> 
+           select(Fingerling_Sale_Date, Farmer_Name, Farmer_Contact,
+                  Farmer_County,Fingerlings_Sold, Numbers_Sold) |> 
+           mutate(Month = month(Fingerling_Sale_Date, label = T),
+                  Week = week(Fingerling_Sale_Date),
+                  Day = wday(Fingerling_Sale_Date, label = T),
+                  Week = as.factor(Week)) |>
+           select(Fingerlings_Sold, Numbers_Sold, Month) |> 
+           group_by(Fingerlings_Sold, Month) |> 
+           summarise(Numbers_Sold = sum(Numbers_Sold)) |> 
+           mutate(Total = sum(Numbers_Sold)) |> ungroup() |> 
+           pivot_wider(names_from = Month, values_from = Numbers_Sold, values_fill = 0) |> 
+           select(1,3,2) |> arrange(desc(Total)) |> 
+           gt()
+   }) 
+   output$weeklysales <- renderTable({
+       data |> filter(Section == "General_Sales") |> 
+           select(Sales_Date:Receipt_number) |> 
+           mutate(Week = week(Sales_Date)) |> 
+           group_by(Week, Product_Sold) |> 
+           summarise(Revenue = sum(Sales_Total_Revenue)) |>
+           pivot_wider(names_from = Week, values_from = Revenue, values_fill = 0) |> 
+           rename(`Week 1` = `1`,
+                  `Week 2` = `2`,
+                  `Week 3` = `3`,
+                  `Week 4` = `4`,
+                  `Week 5` = `5`,
+                  `Products Sold`=Product_Sold) |> 
+           rowwise(`Products Sold`) |> 
+           mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+           arrange(desc(Total)) |> ungroup() |> 
+           gt()
+           
+   })
+   output$monthlysales <- renderTable({
+       data |> filter(Section == "General_Sales") |> 
+           select(Sales_Date:Receipt_number) |> 
+           mutate(Month = month(Sales_Date, label =T)) |> 
+           group_by(Month, Product_Sold) |> 
+           summarise(Sales_Total_Revenue = sum(Sales_Total_Revenue)) |> 
+           group_by(Product_Sold) |> 
+           mutate(Total = sum(Sales_Total_Revenue)) |> ungroup() |>  
+           pivot_wider(names_from = Month,
+                       values_from = Sales_Total_Revenue, values_fill = 0) |> 
+           select(1,3,2) |> arrange(desc(Total)) |> 
+           gt()
+   })
+   output$WeeklyFoodFish <- renderTable({
+       data |> filter(Section == "Food_Fish_Harvest") |> 
+           select(Harvest_Date:Total_Weight_Harvested) |> 
+           mutate(Week = week(Harvest_Date)) |> 
+           group_by(Species_Harvested, Week) |> 
+           summarise(Total_Weight_Harvested = sum(Total_Weight_Harvested), .groups = "drop") |> 
+           pivot_wider(names_from = Week, values_from = Total_Weight_Harvested, values_fill = 0) |> 
+           rename(`Week 1` = `1`,
+                  `Week 2` = `2`,
+                  `Week 3` = `3`,
+                  `Week 4` = `4`,
+                  `Week 5` = `5`,
+                  `Species Harvested`=Species_Harvested) |> 
+           rowwise(`Species Harvested`) |> 
+           mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+           arrange(desc(Total)) |> ungroup() |> 
+           gt()
+   })
+   output$Visits <- renderTable({
+       data |> filter(Section == "Visitors") |> 
+           select(Date_of_Visit:Visit_Purpose) |> 
+           mutate(Week = week(Date_of_Visit)) |> 
+           count(Week, Visitor_s_County, sort = T) |> 
+           pivot_wider(names_from = Week, values_from = n, values_fill = 0) |> 
+           relocate(`1`, .after = 1) |> 
+           rename(`Week 1` = `1`,
+                  `Week 2` = `2`,
+                  `Week 3` = `3`,
+                  `Week 4` = `4`,
+                  `Week 5` = `5`,
+                  `Visitor's County`=Visitor_s_County) |> 
+           rowwise(`Visitor's County`) |> 
+           mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+           arrange(desc(Total)) |> ungroup() |> 
+           gt()
+   })
 }
+
 
 # Run the application 
 shinyApp(ui = ui, server = server)
