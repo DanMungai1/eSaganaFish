@@ -43,7 +43,8 @@ ui <- dashboardPage(
                         ),
                         fluidRow(
                             column(width = 12,
-                                   box(tableOutput("Visits")))
+                                   box(gt_output("Visits"), width = 6),
+                                   box(gt_output("monthly_visits"), width = 6))
                         )
                     )
             ),
@@ -54,9 +55,9 @@ ui <- dashboardPage(
                                    box(plotOutput("fingers"), width = 12))),
                         fluidRow(
                             column(width = 6,
-                                   box(tableOutput("weekly"), width = 12)),
+                                   box(gt_output("weekly"), width = 12)),
                             column(width = 6,
-                                   box(tableOutput("monthly"), width = 12))
+                                   box(gt_output("monthly"), width = 12))
                         )
                     )
             ),
@@ -68,9 +69,9 @@ ui <- dashboardPage(
                         ),
                         fluidRow(
                             column(width = 6,
-                                   box(tableOutput("weeklysales"), width = 12)),
+                                   box(gt_output("weeklysales"), width = 12)),
                             column(width = 6,
-                                   box(tableOutput("monthlysales"), width = 12))
+                                   box(gt_output("monthlysales"), width = 12))
                         )
                     )
             ),
@@ -82,7 +83,8 @@ ui <- dashboardPage(
                         ),
                         fluidRow(
                             column(width = 12,
-                                   box(tableOutput("WeeklyFoodFish"), width = 12))
+                                   box(gt_output("WeeklyFoodFish"), width = 6),
+                                   box(gt_output("monthlyfoodfish"), width = 6))
                         )
                     )
         ))
@@ -173,7 +175,7 @@ server <- function(input, output) {
                   text = element_text(family = "Noto serif")) +
             labs(x = "Harvest Date", y = "Harvested Weight")
     })
-    output$weekly <- renderTable({
+    output$weekly <- render_gt({
         data |> filter(Section == "Fingerlings_Sales") |> 
             select(Fingerling_Sale_Date, Farmer_Name, Farmer_Contact,
                    Farmer_County,Fingerlings_Sold, Numbers_Sold) |> 
@@ -184,7 +186,7 @@ server <- function(input, output) {
             select(Fingerlings_Sold, Numbers_Sold, Week) |> 
             group_by(Fingerlings_Sold, Week) |> 
             summarise(Numbers_Sold = sum(Numbers_Sold), .groups = "drop") |> 
-            pivot_wider(names_from = Week, values_from = Numbers_Sold, values_fill = 0) |> 
+            pivot_wider(names_from = Week, values_from = Numbers_Sold) |> 
             rename(`Week 1` = `1`,
                    `Week 2` = `2`,
                    `Week 3` = `3`,
@@ -192,11 +194,21 @@ server <- function(input, output) {
                    `Week 5` = `5`,
                    `Species Sold`=Fingerlings_Sold) |> 
             rowwise(`Species Sold`) |> 
-            mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+            mutate(Total = sum(c_across(starts_with("Week")), na.rm = T))  |> 
             arrange(desc(Total)) |> ungroup() |> 
-            gt()
+            gt(rowname_col = "Species Sold") |>
+            sub_missing(missing_text = "-") |> 
+            summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
+                         formatter = fmt_number, decimals = 0,
+                         missing_text = "-") |> 
+            tab_options(
+                data_row.padding = px(2),
+                summary_row.padding = px(3), # A bit more padding for summaries
+                row_group.padding = px(4)    # And even more for our groups
+            ) |> 
+            opt_stylize(style = 6, color = 'gray')
     })
-   output$monthly <- renderTable({
+   output$monthly <- render_gt({
        data |> filter(Section == "Fingerlings_Sales") |> 
            select(Fingerling_Sale_Date, Farmer_Name, Farmer_Contact,
                   Farmer_County,Fingerlings_Sold, Numbers_Sold) |> 
@@ -208,17 +220,26 @@ server <- function(input, output) {
            group_by(Fingerlings_Sold, Month) |> 
            summarise(Numbers_Sold = sum(Numbers_Sold)) |> 
            mutate(Total = sum(Numbers_Sold)) |> ungroup() |> 
-           pivot_wider(names_from = Month, values_from = Numbers_Sold, values_fill = 0) |> 
+           pivot_wider(names_from = Month, values_from = Numbers_Sold) |> 
            select(1,3,2) |> arrange(desc(Total)) |> 
-           gt()
+           gt(rowname_col = "Fingerlings_Sold") |>
+           sub_missing(missing_text = "-") |> 
+           summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
+                        formatter = fmt_number, decimals = 0) |> 
+           tab_options(
+               data_row.padding = px(2),
+               summary_row.padding = px(3), # A bit more padding for summaries
+               row_group.padding = px(4)    # And even more for our groups
+           ) |> 
+           opt_stylize(style = 6, color = 'gray')
    }) 
-   output$weeklysales <- renderTable({
+   output$weeklysales <- render_gt({
        data |> filter(Section == "General_Sales") |> 
            select(Sales_Date:Receipt_number) |> 
            mutate(Week = week(Sales_Date)) |> 
            group_by(Week, Product_Sold) |> 
            summarise(Revenue = sum(Sales_Total_Revenue)) |>
-           pivot_wider(names_from = Week, values_from = Revenue, values_fill = 0) |> 
+           pivot_wider(names_from = Week, values_from = Revenue) |> 
            rename(`Week 1` = `1`,
                   `Week 2` = `2`,
                   `Week 3` = `3`,
@@ -226,12 +247,21 @@ server <- function(input, output) {
                   `Week 5` = `5`,
                   `Products Sold`=Product_Sold) |> 
            rowwise(`Products Sold`) |> 
-           mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+           mutate(Total = sum(c_across(starts_with("Week")),na.rm =T))  |> 
            arrange(desc(Total)) |> ungroup() |> 
-           gt()
+           gt(rowname_col = "Products Sold") |> 
+           sub_missing(missing_text = "-") |> 
+           summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
+                        formatter = fmt_number, decimals = 0) |> 
+           tab_options(
+               data_row.padding = px(2),
+               summary_row.padding = px(3), # A bit more padding for summaries
+               row_group.padding = px(4)    # And even more for our groups
+           ) |> 
+           opt_stylize(style = 6, color = 'gray')
            
    })
-   output$monthlysales <- renderTable({
+   output$monthlysales <- render_gt({
        data |> filter(Section == "General_Sales") |> 
            select(Sales_Date:Receipt_number) |> 
            mutate(Month = month(Sales_Date, label =T)) |> 
@@ -240,17 +270,26 @@ server <- function(input, output) {
            group_by(Product_Sold) |> 
            mutate(Total = sum(Sales_Total_Revenue)) |> ungroup() |>  
            pivot_wider(names_from = Month,
-                       values_from = Sales_Total_Revenue, values_fill = 0) |> 
+                       values_from = Sales_Total_Revenue) |> 
            select(1,3,2) |> arrange(desc(Total)) |> 
-           gt()
+           gt(rowname_col = "Product_Sold") |> 
+           sub_missing(missing_text = "-") |> 
+           summary_rows(fns = list("Total" = ~sum(.)),
+                        formatter = fmt_number, decimals = 0) |> 
+           tab_options(
+               data_row.padding = px(2),
+               summary_row.padding = px(3), # A bit more padding for summaries
+               row_group.padding = px(4)    # And even more for our groups
+           ) |> 
+           opt_stylize(style = 6, color = 'gray')
    })
-   output$WeeklyFoodFish <- renderTable({
+   output$WeeklyFoodFish <- render_gt({
        data |> filter(Section == "Food_Fish_Harvest") |> 
            select(Harvest_Date:Total_Weight_Harvested) |> 
            mutate(Week = week(Harvest_Date)) |> 
            group_by(Species_Harvested, Week) |> 
            summarise(Total_Weight_Harvested = sum(Total_Weight_Harvested), .groups = "drop") |> 
-           pivot_wider(names_from = Week, values_from = Total_Weight_Harvested, values_fill = 0) |> 
+           pivot_wider(names_from = Week, values_from = Total_Weight_Harvested) |> 
            rename(`Week 1` = `1`,
                   `Week 2` = `2`,
                   `Week 3` = `3`,
@@ -258,16 +297,46 @@ server <- function(input, output) {
                   `Week 5` = `5`,
                   `Species Harvested`=Species_Harvested) |> 
            rowwise(`Species Harvested`) |> 
-           mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+           mutate(Total = sum(c_across(starts_with("Week")), na.rm = T))  |> 
            arrange(desc(Total)) |> ungroup() |> 
-           gt()
+           gt(rowname_col = "Species Harvested") |> 
+           sub_missing(missing_text = "-") |> 
+           summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
+                        formatter = fmt_number, decimals = 1) |> 
+           tab_options(
+               data_row.padding = px(2),
+               summary_row.padding = px(3), # A bit more padding for summaries
+               row_group.padding = px(4)    # And even more for our groups
+           ) |> 
+           opt_stylize(style = 6, color = 'gray')
    })
-   output$Visits <- renderTable({
+   output$monthlyfoodfish <- render_gt({
+       data |> filter(Section == "Food_Fish_Harvest") |> 
+           select(Harvest_Date:Total_Weight_Harvested) |> 
+           mutate(Month = month(Harvest_Date, label = TRUE)) |> 
+           group_by(Species_Harvested, Month) |> 
+           summarise(Total_Weight_Harvested = sum(Total_Weight_Harvested), .groups = "drop") |> 
+           pivot_wider(names_from = Month, values_from = Total_Weight_Harvested) |> 
+           rename(`Species Harvested`=Species_Harvested) |> 
+           rowwise(`Species Harvested`) |> 
+           mutate(Total = sum(c_across(starts_with("Jan"))))  |> 
+           arrange(desc(Total)) |> ungroup() |> 
+           gt(rowname_col = "Species Harvested") |> 
+           summary_rows(fns = list("Total" = ~sum(.)),
+                        formatter = fmt_number, decimals = 1) |> 
+           tab_options(
+               data_row.padding = px(2),
+               summary_row.padding = px(3), # A bit more padding for summaries
+               row_group.padding = px(4)    # And even more for our groups
+           ) |> 
+           opt_stylize(style = 6, color = 'gray')
+   })
+   output$Visits <- render_gt({
        data |> filter(Section == "Visitors") |> 
            select(Date_of_Visit:Visit_Purpose) |> 
            mutate(Week = week(Date_of_Visit)) |> 
            count(Week, Visitor_s_County, sort = T) |> 
-           pivot_wider(names_from = Week, values_from = n, values_fill = 0) |> 
+           pivot_wider(names_from = Week, values_from = n) |> 
            relocate(`1`, .after = 1) |> 
            rename(`Week 1` = `1`,
                   `Week 2` = `2`,
@@ -276,9 +345,38 @@ server <- function(input, output) {
                   `Week 5` = `5`,
                   `Visitor's County`=Visitor_s_County) |> 
            rowwise(`Visitor's County`) |> 
-           mutate(Total = sum(c_across(starts_with("Week"))))  |> 
+           mutate(Total = sum(c_across(starts_with("Week")), na.rm = T))  |> 
            arrange(desc(Total)) |> ungroup() |> 
-           gt()
+           gt(rowname_col = "Visitor's County") |> 
+           sub_missing(missing_text = "-") |> 
+           summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
+                        formatter = fmt_number, decimals = 0) |> 
+           tab_options(
+               data_row.padding = px(2),
+               summary_row.padding = px(3), # A bit more padding for summaries
+               row_group.padding = px(4)    # And even more for our groups
+           ) |> 
+           opt_stylize(style = 6, color = 'gray')
+   })
+   output$monthly_visits <- render_gt({
+       data |> filter(Section == "Visitors") |> 
+           select(Date_of_Visit:Visit_Purpose) |> 
+           mutate(Month = month(Date_of_Visit, label =TRUE)) |> 
+           count(Month, Visitor_s_County, sort = T) |> 
+           pivot_wider(names_from = Month, values_from = n, values_fill = 0) |> 
+           rename(`Visitor's County`=Visitor_s_County) |> 
+           rowwise(`Visitor's County`) |> 
+           mutate(Total = sum(c_across(starts_with("Jan"))))  |> 
+           arrange(desc(Total)) |> ungroup() |> 
+           gt(rowname_col = "Visitor's County") |> 
+           summary_rows(fns = list("Total" = ~sum(.)),
+                        formatter = fmt_number, decimals = 0) |> 
+           tab_options(
+                            data_row.padding = px(2),
+                            summary_row.padding = px(3), # A bit more padding for summaries
+                            row_group.padding = px(4)    # And even more for our groups
+                        ) |> 
+           opt_stylize(style = 6, color = 'gray')
    })
 }
 
