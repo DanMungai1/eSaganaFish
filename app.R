@@ -8,6 +8,7 @@ library(gt)
 library(lubridate)
 library(showtext)
 library(writexl)
+library(glue)
 
 font_add_google(family = "Noto serif", name = "Noto Serif")
 showtext_auto()
@@ -212,16 +213,13 @@ server <- function(input, output) {
        data |> filter(Section == "Fingerlings_Sales") |> 
            select(Fingerling_Sale_Date, Farmer_Name, Farmer_Contact,
                   Farmer_County,Fingerlings_Sold, Numbers_Sold) |> 
-           mutate(Month = month(Fingerling_Sale_Date, label = T),
-                  Week = week(Fingerling_Sale_Date),
-                  Day = wday(Fingerling_Sale_Date, label = T),
-                  Week = as.factor(Week)) |>
+           mutate(Month = month(Fingerling_Sale_Date, label = T)) |>
            select(Fingerlings_Sold, Numbers_Sold, Month) |> 
            group_by(Fingerlings_Sold, Month) |> 
            summarise(Numbers_Sold = sum(Numbers_Sold)) |> 
            mutate(Total = sum(Numbers_Sold)) |> ungroup() |> 
-           pivot_wider(names_from = Month, values_from = Numbers_Sold) |> 
-           select(1,3,2) |> arrange(desc(Total)) |> 
+           pivot_wider(names_from = Month, values_from = Numbers_Sold) |>
+           arrange(desc(Total)) |> relocate(Total, .after = Feb) |> 
            gt(rowname_col = "Fingerlings_Sold") |>
            sub_missing(missing_text = "-") |> 
            summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
@@ -270,8 +268,8 @@ server <- function(input, output) {
            group_by(Product_Sold) |> 
            mutate(Total = sum(Sales_Total_Revenue)) |> ungroup() |>  
            pivot_wider(names_from = Month,
-                       values_from = Sales_Total_Revenue) |> 
-           select(1,3,2) |> arrange(desc(Total)) |> 
+                       values_from = Sales_Total_Revenue)|> 
+           arrange(desc(Total)) |> 
            gt(rowname_col = "Product_Sold") |> 
            sub_missing(missing_text = "-") |> 
            summary_rows(fns = list("Total" = ~sum(.)),
@@ -363,13 +361,14 @@ server <- function(input, output) {
            select(Date_of_Visit:Visit_Purpose) |> 
            mutate(Month = month(Date_of_Visit, label =TRUE)) |> 
            count(Month, Visitor_s_County, sort = T) |> 
-           pivot_wider(names_from = Month, values_from = n, values_fill = 0) |> 
+           pivot_wider(names_from = Month, values_from = n) |> 
            rename(`Visitor's County`=Visitor_s_County) |> 
            rowwise(`Visitor's County`) |> 
-           mutate(Total = sum(c_across(starts_with("Jan"))))  |> 
+           mutate(Total = sum(c_across(1:2), na.rm = TRUE))  |> 
            arrange(desc(Total)) |> ungroup() |> 
            gt(rowname_col = "Visitor's County") |> 
-           summary_rows(fns = list("Total" = ~sum(.)),
+           sub_missing(missing_text = "-") |> 
+           summary_rows(fns = list("Total" = ~sum(., na.rm = TRUE)),
                         formatter = fmt_number, decimals = 0) |> 
            tab_options(
                             data_row.padding = px(2),
