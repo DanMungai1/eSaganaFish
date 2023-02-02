@@ -188,7 +188,7 @@ server <- function(input, output) {
             group_by(Fingerlings_Sold, Week) |> 
             summarise(Numbers_Sold = sum(Numbers_Sold), .groups = "drop") |> 
             pivot_wider(names_from = Week, values_from = Numbers_Sold) |> 
-            rename_with(~glue("Week {.}")) |> rename(`Species Sold` = `Week Fingerlings_Sold`) |> 
+            rename_at(vars(-1),~glue("Week {.}")) |> rename(`Species Sold` = `Fingerlings_Sold`) |> 
             rowwise(`Species Sold`) |> 
             mutate(Total = sum(c_across(starts_with("Week")), na.rm = T))  |> 
             arrange(desc(Total)) |> ungroup() |> 
@@ -233,7 +233,7 @@ server <- function(input, output) {
            group_by(Week, Product_Sold) |> 
            summarise(Revenue = sum(Sales_Total_Revenue)) |>
            pivot_wider(names_from = Week, values_from = Revenue) |> 
-           rename_with(~glue("Week {.}")) |> rename(`Products Sold` = `Week Product_Sold`) |> 
+           rename_at(vars(-1),~glue("Week {.}")) |> rename(`Products Sold` = `Product_Sold`) |> 
            rowwise(`Products Sold`) |> 
            mutate(Total = sum(c_across(starts_with("Week")),na.rm =T))  |> 
            arrange(desc(Total)) |> ungroup() |> 
@@ -278,8 +278,8 @@ server <- function(input, output) {
            group_by(Species_Harvested, Week) |> 
            summarise(Total_Weight_Harvested = sum(Total_Weight_Harvested), .groups = "drop") |> 
            pivot_wider(names_from = Week, values_from = Total_Weight_Harvested) |> 
-           rename_with(~glue("Week {.}")) |> 
-           rename(`Species Harvested` = `Week Species_Harvested`) |>
+           rename_at(vars(-1),~glue("Week {.}")) |> 
+           rename(`Species Harvested` = `Species_Harvested`) |>
            rowwise(`Species Harvested`) |> 
            mutate(Total = sum(c_across(starts_with("Week")), na.rm = T))  |> 
            arrange(desc(Total)) |> ungroup() |> 
