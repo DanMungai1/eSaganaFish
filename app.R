@@ -259,10 +259,10 @@ server <- function(input, output) {
            mutate(Total = sum(Sales_Total_Revenue)) |> ungroup() |>  
            pivot_wider(names_from = Month,
                        values_from = Sales_Total_Revenue)|> 
-           arrange(desc(Total)) |> 
+           arrange(desc(Total)) |> relocate(Total, .after = last_col()) |> 
            gt(rowname_col = "Product_Sold") |> 
            sub_missing(missing_text = "-") |> 
-           summary_rows(fns = list("Total" = ~sum(.)),
+           summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
                         formatter = fmt_number, decimals = 0) |> 
            tab_options(
                data_row.padding = px(2),
