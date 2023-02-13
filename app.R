@@ -9,7 +9,9 @@ library(lubridate)
 library(showtext)
 library(writexl)
 library(glue)
-
+library(sf)
+library(sp)
+library(rKenyaCensus)
 font_add_google(family = "Noto serif", name = "Noto Serif")
 showtext_auto()
 showtext_opts(dpi = 130)
@@ -39,8 +41,10 @@ ui <- dashboardPage(
             tabItem("Visitors",
                     fluidPage(
                         fluidRow(
-                            column(width = 12,
-                                   box(plotOutput("counties"), width = 12))
+                            column(width = 6,
+                                   box(plotOutput("counties"), width = 12)),
+                            column(width = 6,
+                                   box(plotOutput("map"), width = 12))
                         ),
                         fluidRow(
                             column(width = 12,
@@ -110,7 +114,7 @@ server <- function(input, output) {
                    select(Harvest_Date:Total_Weight_Harvested),
                
                Visitors = data |> filter(Section == "Visitors") |> 
-                   select(Date_of_Visit:Visit_Purpose),
+                   select(Date_of_Visit, Visitor_s_name:Visitor_Time_Out),
                
                Orders = data |> filter(Section == "Pre-Orders") |> 
                    select(Order_Date:Order_Delivery_Date),
@@ -132,14 +136,25 @@ server <- function(input, output) {
         }
     )
     output$DataSets <- renderDT({Dataset()})
+    SHP <- KenyaCounties_SHP |> 
+      st_as_sf()
     output$counties <- renderPlot({
         data |> filter(Section == "Visitors") |> 
             select(Date_of_Visit:Visit_Purpose) |> 
-            count(Date_of_Visit, Visitor_s_County,name = "Visitors") |> 
-            ggplot(aes(Date_of_Visit, Visitors, fill = Visitor_s_County)) + 
+            mutate(Week = week(Date_of_Visit)) |> 
+            count(Week, Visitor_s_County,name = "Visitors") |>
+            ggplot(aes(as_factor(Week), Visitors, fill = Visitor_s_County)) + 
             geom_chicklet() +
-            theme(legend.position = c(0.9, 0.7), text = element_text(family = "Noto serif")) +
-            labs(x = "Date of Visit", fill = "County of Visitor")
+            theme(legend.position = c(0.9, 0.85), text = element_text(family = "Noto serif")) +
+            labs(x = "Week of Visit", fill = "County of Visitor")
+    })
+    output$map <- renderPlot({
+      SHP |> left_join(data |> filter(Section == "Visitors") |> 
+                         select(County = Visitor_s_County) |> 
+                         count(County, sort = T, name = "Visitors") |> 
+                         mutate(County = str_to_upper(County)))|> 
+        ggplot(aes(fill = Visitors)) +
+        geom_sf(show.legend = F) + theme_void()
     })
     output$fingers <- renderPlot({
         data |> filter(Section == "Fingerlings_Sales") |> 
@@ -191,7 +206,8 @@ server <- function(input, output) {
             rename_at(vars(-1),~glue("Week {.}")) |> rename(`Species Sold` = `Fingerlings_Sold`) |> 
             rowwise(`Species Sold`) |> 
             mutate(Total = sum(c_across(starts_with("Week")), na.rm = T))  |> 
-            arrange(desc(Total)) |> ungroup() |> 
+            arrange(desc(Total)) |> ungroup() |>
+            relocate("Week 6", .after = "Week 5") |> 
             gt(rowname_col = "Species Sold") |>
             sub_missing(missing_text = "-") |> 
             summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
@@ -306,7 +322,8 @@ server <- function(input, output) {
            mutate(Total = sum(c_across(starts_with("Jan"))))  |> 
            arrange(desc(Total)) |> ungroup() |> 
            gt(rowname_col = "Species Harvested") |> 
-           summary_rows(fns = list("Total" = ~sum(.)),
+           sub_missing(missing_text = "-") |> 
+           summary_rows(fns = list("Total" = ~sum(., na.rm = T)),
                         formatter = fmt_number, decimals = 1) |> 
            tab_options(
                data_row.padding = px(2),
