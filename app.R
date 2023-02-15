@@ -12,6 +12,8 @@ library(glue)
 library(sf)
 library(sp)
 library(rKenyaCensus)
+library(rmapshaper)
+library(ggtext)
 font_add_google(family = "Noto serif", name = "Noto Serif")
 showtext_auto()
 showtext_opts(dpi = 130)
@@ -154,7 +156,10 @@ server <- function(input, output) {
                          count(County, sort = T, name = "Visitors") |> 
                          mutate(County = str_to_upper(County)))|> 
         ggplot(aes(fill = Visitors)) +
-        geom_sf(show.legend = F) + theme_void()
+        geom_sf(show.legend = F) +
+        geom_sf_label(aes(label = Visitors), col = "yellow", size = 3,
+                      show.legend = F) +
+        theme_void()
     })
     output$fingers <- renderPlot({
         data |> filter(Section == "Fingerlings_Sales") |> 

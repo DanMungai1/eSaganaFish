@@ -5,9 +5,9 @@ account: kefssagana
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8243606
-bundleId: 6842039
+bundleId: 6848680
 url: https://kefssagana.shinyapps.io/eFishSagana/
-when: 1676316993.04363
-lastSyncTime: 1676316993.04364
+when: 1676450781.56198
+lastSyncTime: 1676450781.56199
 asMultiple: FALSE
 asStatic: FALSE
